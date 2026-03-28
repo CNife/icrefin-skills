@@ -203,6 +203,6 @@ mrdang/
 - 支持 8 维度评分
 - 支持报告自动保存
 
-## License
+## 许可证
 
-MIT
+MIT License
