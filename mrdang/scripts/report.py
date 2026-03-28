@@ -10,12 +10,9 @@ def get_reports_dir() -> Path:
     """Get the reports directory path.
 
     Returns:
-        Path to reports directory
+        Path to reports directory (current working directory)
     """
-    # Default to ~/reports/mrdang/
-    reports_dir = Path.home() / "reports" / "mrdang"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    return reports_dir
+    return Path.cwd()
 
 
 def generate_report_filename(stock_name: str, ts_code: str) -> str:
@@ -272,7 +269,7 @@ def save_report(
         screening: Screening results
         checklist: Checklist verification results
         conclusion: Final conclusion
-        output_dir: Output directory (defaults to ~/reports/mrdang/)
+        output_dir: Output directory (defaults to current working directory)
 
     Returns:
         Path to saved report file
