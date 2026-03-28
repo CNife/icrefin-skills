@@ -112,7 +112,12 @@ def generate_report(
 
     # Add screening results
     for item, result in screening.items():
-        status = "✅ 通过" if result == "通过" else "❌ 淘汰"
+        if result == "通过":
+            status = "✅ 通过"
+        elif result == "存疑":
+            status = "⚠️ 存疑"
+        else:
+            status = "❌ 淘汰"
         lines.append(f"| {item} | {status} | |")
 
     screening_passed = all(r == "通过" for r in screening.values())
@@ -357,32 +362,107 @@ The JSON data file should contain:
     with open(args.data, encoding="utf-8") as f:
         params = json.load(f)
 
+    # Support multiple JSON formats
+    stock_name = params.get("stock_name") or params.get("stock", {}).get("name", "Unknown")
+    ts_code = params.get("ts_code") or params.get("stock", {}).get("ts_code", "")
+    industry = params.get("industry") or params.get("stock", {}).get("industry", "")
+
+    # Handle data format - support nested or flat structure
+    data = params.get("data", {})
+    if "valuation" in data:
+        # Transform nested format to expected format
+        valuation = data.get("valuation", {})
+        dividend = data.get("dividend", {})
+        price = data.get("price", {})
+
+        data = {
+            "basic": params.get("stock", {}),
+            "daily_basic": {
+                "pe_ttm": valuation.get("pe_ttm"),
+                "pb": valuation.get("pb"),
+                "total_mv": valuation.get("total_mv"),
+                "circ_mv": valuation.get("circ_mv"),
+                "dv_ratio": dividend.get("dv_ttm"),  # Map dv_ttm to dv_ratio
+            },
+            "financial": data.get("financial", {}),
+            "dividend": {
+                "dividend_count": dividend.get("dividend_count_3y", dividend.get("dividend_count", 0)),
+                "dividend_stability": dividend.get("dividend_stability", "N/A"),
+            },
+            "price_position": {
+                "latest_close": price.get("close"),
+                "high_52w": price.get("high_52w"),
+                "low_52w": price.get("low_52w"),
+                "price_position_pct": price.get("position_pct"),
+                "position_level": price.get("position_level", ""),
+            },
+        }
+
+    # Handle screening format - support nested with result or flat string
+    screening_raw = params.get("screening", {})
+    screening = {}
+    for key, value in screening_raw.items():
+        if isinstance(value, dict):
+            screening[key] = value.get("result", value.get("status", "通过"))
+        else:
+            screening[key] = value
+
+    # Handle scores format - support nested with score/max/reason
+    scores_raw = params.get("scores", {})
+    scores = {}
+    for key, value in scores_raw.items():
+        if isinstance(value, dict):
+            scores[key] = value
+        else:
+            scores[key] = {"score": value, "max": 0, "reason": ""}
+
+    # Handle checklist format - support nested with status or flat string
+    checklist_raw = params.get("checklist", {})
+    checklist = {}
+    for key, value in checklist_raw.items():
+        if isinstance(value, dict):
+            checklist[key] = value.get("status", value.get("result", "存疑"))
+        else:
+            checklist[key] = value
+
+    # Handle search_results - optional
+    search_results = params.get("search_results", {})
+    web_info = params.get("web_info", {})
+    if web_info and not search_results:
+        search_results = {
+            "business_summary": web_info.get("main_business", ""),
+            "position_summary": web_info.get("industry_position", ""),
+        }
+
+    # Handle conclusion - optional
+    conclusion = params.get("conclusion", params.get("suggestion", ""))
+
     if args.command == "generate":
         filepath = save_report(
-            stock_name=params["stock_name"],
-            ts_code=params["ts_code"],
-            industry=params["industry"],
-            data=params["data"],
-            search_results=params["search_results"],
-            scores=params["scores"],
-            screening=params["screening"],
-            checklist=params["checklist"],
-            conclusion=params["conclusion"],
+            stock_name=stock_name,
+            ts_code=ts_code,
+            industry=industry,
+            data=data,
+            search_results=search_results,
+            scores=scores,
+            screening=screening,
+            checklist=checklist,
+            conclusion=conclusion,
             output_dir=args.output,
         )
         print(f"Report saved to: {filepath}")
 
     elif args.command == "preview":
         content = generate_report(
-            stock_name=params["stock_name"],
-            ts_code=params["ts_code"],
-            industry=params["industry"],
-            data=params["data"],
-            search_results=params["search_results"],
-            scores=params["scores"],
-            screening=params["screening"],
-            checklist=params["checklist"],
-            conclusion=params["conclusion"],
+            stock_name=stock_name,
+            ts_code=ts_code,
+            industry=industry,
+            data=data,
+            search_results=search_results,
+            scores=scores,
+            screening=screening,
+            checklist=checklist,
+            conclusion=conclusion,
         )
         print(content)
 
