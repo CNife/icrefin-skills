@@ -1,3 +1,11 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "pandas",
+#     "tushare",
+# ]
+# ///
+
 """Tushare data fetching functions for MR Dang stock analysis."""
 
 import os
@@ -308,27 +316,87 @@ def get_all_data(ts_code: str) -> dict[str, Any]:
     }
 
 
+def main() -> None:
+    """CLI entry point for data fetching."""
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(
+        description="Fetch stock data from Tushare",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Search for a stock by name or code
+  uv run scripts/data.py search <股票名称或代码>
+
+  # Get all data for a specific stock code
+  uv run scripts/data.py get <ts_code> --type all
+
+  # Get specific data type
+  uv run scripts/data.py get <ts_code> --type basic
+  uv run scripts/data.py get <ts_code> --type daily --date YYYYMMDD
+  uv run scripts/data.py get <ts_code> --type financial --periods 8
+  uv run scripts/data.py get <ts_code> --type dividend --years 5
+  uv run scripts/data.py get <ts_code> --type ohlcv --days 100
+  uv run scripts/data.py get <ts_code> --type price --days 250
+        """,
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # Search command
+    search_parser = subparsers.add_parser("search", help="Search for stock by name or code")
+    search_parser.add_argument("keyword", help="Stock name or code to search")
+
+    # Get command
+    get_parser = subparsers.add_parser("get", help="Get data for a stock")
+    get_parser.add_argument("ts_code", help="Tushare stock code (e.g., 600036.SH)")
+    get_parser.add_argument(
+        "--type",
+        choices=["basic", "daily", "financial", "financial-full", "dividend", "ohlcv", "price", "all"],
+        default="all",
+        help="Type of data to fetch (default: all)",
+    )
+    get_parser.add_argument("--date", help="Trade date for daily data (YYYYMMDD format)")
+    get_parser.add_argument("--periods", type=int, default=4, help="Number of periods for financial data (default: 4)")
+    get_parser.add_argument("--years", type=int, default=3, help="Number of years for dividend data (default: 3)")
+    get_parser.add_argument("--days", type=int, default=250, help="Number of trading days for OHLCV/price data (default: 250)")
+
+    args = parser.parse_args()
+
+    if args.command == "search":
+        result = search_stock(args.keyword)
+        if result.empty:
+            print(f"No stock found for: {args.keyword}")
+        else:
+            print(result[["ts_code", "name", "industry", "market", "list_date"]].to_string())
+
+    elif args.command == "get":
+        if args.type == "basic":
+            print(get_stock_basic(args.ts_code))
+        elif args.type == "daily":
+            print(get_daily_basic(args.ts_code, args.date))
+        elif args.type == "financial":
+            print(get_financial_indicator_summary(args.ts_code))
+        elif args.type == "financial-full":
+            df = get_financial_indicator(args.ts_code, args.periods)
+            if df.empty:
+                print(f"No financial data found for {args.ts_code}")
+            else:
+                print(df.to_string())
+        elif args.type == "dividend":
+            print(get_dividend_info(args.ts_code, args.years))
+        elif args.type == "ohlcv":
+            df = get_daily_ohlcv(args.ts_code, args.days)
+            if df.empty:
+                print(f"No OHLCV data found for {args.ts_code}")
+            else:
+                print(df.to_string())
+        elif args.type == "price":
+            print(get_price_position(args.ts_code, args.days))
+        else:
+            data = get_all_data(args.ts_code)
+            print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
+
+
 if __name__ == "__main__":
-    # Test the functions
-    print("Testing search_stock...")
-    result = search_stock("招商银行")
-    print(result)
-
-    if not result.empty:
-        ts_code = result.iloc[0]["ts_code"]
-        print(f"\nTesting with ts_code: {ts_code}")
-
-        print("\n--- Stock Basic ---")
-        print(get_stock_basic(ts_code))
-
-        print("\n--- Daily Basic ---")
-        print(get_daily_basic(ts_code))
-
-        print("\n--- Financial Indicator ---")
-        print(get_financial_indicator_summary(ts_code))
-
-        print("\n--- Dividend Info ---")
-        print(get_dividend_info(ts_code))
-
-        print("\n--- Price Position ---")
-        print(get_price_position(ts_code))
+    main()

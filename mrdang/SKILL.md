@@ -18,9 +18,23 @@ description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A
 ## 触发方式
 
 用户输入示例：
-- MR Dang 选股 招商银行
-- MR Dang 打分 中国神华 资源股
-- 帮我用 MR Dang 体系分析 600028
+- MR Dang 选股 `<股票名称>`
+- MR Dang 打分 `<股票名称>` `<行业类型>`
+- 帮我用 MR Dang 体系分析 `<股票代码>`
+
+## 可用脚本
+
+| 脚本 | 用途 |
+|------|------|
+| `scripts/data.py` | 从 Tushare 获取股票数据 |
+| `scripts/search.py` | 通过 Tavily 搜索网络信息 |
+| `scripts/report.py` | 生成并保存分析报告 |
+
+所有脚本均遵循 **PEP 723** 标准，内置依赖声明，可直接用 `uv run` 执行，无需手动安装依赖。
+
+**环境变量要求：**
+- `TUSHARE_TOKEN` - Tushare API Token
+- `TAVILY_API_KEY` - Tavily API Key（搜索功能需要）
 
 ## 执行流程
 
@@ -28,33 +42,40 @@ description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A
 
 如果用户提供股票名称，先用 Tushare 查询股票代码：
 
-```python
-from scripts.data import search_stock
-result = search_stock("招商银行")
-# 返回 ts_code, 名称, 行业, 上市日期等
+```bash
+uv run scripts/data.py search <股票名称或代码>
 ```
+
+输出包含 ts_code、名称、行业、上市日期等信息。
 
 ### 第二步：获取 Tushare 结构化数据
 
 使用 Tushare 获取以下数据：
 
-```python
-from scripts.data import (
-    get_stock_basic,       # 股票基础信息
-    get_daily_basic,       # 每日指标 (PE, PB, 总市值等)
-    get_financial_indicator,  # 财务指标 (ROE, 资产负债率等)
-    get_dividend_info,     # 分红信息 (股息率, 分红稳定性等)
-    get_daily_ohlcv,       # 日线行情 (用于判断股价位置)
-    get_price_position,    # 股价位置判断
-)
+```bash
+# 获取所有数据（推荐）
+uv run scripts/data.py get <ts_code> --type all
 
-# 获取数据
-basic = get_stock_basic(ts_code="600036.SH")
-daily = get_daily_basic(ts_code="600036.SH")
-financial = get_financial_indicator(ts_code="600036.SH")
-dividend = get_dividend_info(ts_code="600036.SH")
-ohlcv = get_daily_ohlcv(ts_code="600036.SH", days=250)
-price_pos = get_price_position(ts_code="600036.SH")
+# 获取基础信息
+uv run scripts/data.py get <ts_code> --type basic
+
+# 获取每日指标 (PE, PB, 市值等)
+uv run scripts/data.py get <ts_code> --type daily
+
+# 获取财务指标
+uv run scripts/data.py get <ts_code> --type financial
+
+# 获取完整财务指标（多期）
+uv run scripts/data.py get <ts_code> --type financial-full --periods 8
+
+# 获取分红信息
+uv run scripts/data.py get <ts_code> --type dividend --years 5
+
+# 获取日线行情
+uv run scripts/data.py get <ts_code> --type ohlcv --days 250
+
+# 获取股价位置判断
+uv run scripts/data.py get <ts_code> --type price
 ```
 
 **必须获取的核心字段：**
@@ -65,17 +86,18 @@ price_pos = get_price_position(ts_code="600036.SH")
 
 ### 第三步：Tavily 搜索非结构化信息
 
-使用 `scripts.search` 模块搜索以下内容：
+使用 `scripts/search.py` 搜索以下内容：
 
-```python
-from scripts.search import search_company_info, extract_search_content
-
+```bash
 # 搜索公司全面信息
-results = search_company_info("招商银行", industry="银行")
+uv run scripts/search.py company <公司名称> --industry <行业>
 
-# 提取摘要
-business_summary = extract_search_content(results.get("business", []))
-position_summary = extract_search_content(results.get("position", []))
+# 单独搜索
+uv run scripts/search.py query "<公司名称> 主营业务" --max-results 5 --depth advanced
+uv run scripts/search.py query "<公司名称> 行业地位" --include-domains eastmoney.com
+
+# 从搜索结果提取摘要
+uv run scripts/search.py extract results.json --max-length 500
 ```
 
 **搜索模板（自动执行）：**
@@ -283,107 +305,61 @@ position_summary = extract_search_content(results.get("position", []))
 **风险提示**：本报告基于公开数据分析，不构成投资建议。投资有风险，入市需谨慎。
 ```
 
-## 可用工具
+## 可用命令
 
-### 数据获取函数 (scripts.data)
+### 数据获取 (scripts/data.py)
 
-```python
-from scripts.data import (
-    search_stock,            # 搜索股票代码
-    get_stock_basic,         # 股票基础信息
-    get_daily_basic,         # 每日指标 (PE, PB, 市值等)
-    get_financial_indicator, # 财务指标
-    get_dividend_info,       # 分红信息
-    get_daily_ohlcv,         # 日线行情
-    get_price_position,      # 股价位置判断
-    get_all_data,            # 获取所有数据
-)
-```
+| 命令 | 说明 |
+|------|------|
+| `uv run scripts/data.py search <关键词>` | 搜索股票代码 |
+| `uv run scripts/data.py get <ts_code> --type basic` | 股票基础信息 |
+| `uv run scripts/data.py get <ts_code> --type daily [--date YYYYMMDD]` | 每日指标 (PE, PB, 市值等) |
+| `uv run scripts/data.py get <ts_code> --type financial` | 财务指标摘要 |
+| `uv run scripts/data.py get <ts_code> --type financial-full [--periods N]` | 完整财务指标 |
+| `uv run scripts/data.py get <ts_code> --type dividend [--years N]` | 分红信息 |
+| `uv run scripts/data.py get <ts_code> --type ohlcv [--days N]` | 日线行情 |
+| `uv run scripts/data.py get <ts_code> --type price [--days N]` | 股价位置判断 |
+| `uv run scripts/data.py get <ts_code> --type all` | 获取所有数据 |
 
-### 网络搜索函数 (scripts.search)
+### 网络搜索 (scripts/search.py)
 
-```python
-from scripts.search import (
-    tavily_search,           # Tavily API 搜索
-    search_company_info,     # 搜索公司全面信息
-    extract_search_content,  # 提取搜索摘要
-)
-```
+| 命令 | 说明 |
+|------|------|
+| `uv run scripts/search.py query <查询> [--max-results N] [--depth basic\|advanced]` | Tavily 搜索 |
+| `uv run scripts/search.py company <公司名> [--industry 行业]` | 搜索公司全面信息 |
+| `uv run scripts/search.py extract <json文件> [--max-length N]` | 提取搜索摘要 |
 
-### 报告生成函数 (scripts.report)
+### 报告生成 (scripts/report.py)
 
-```python
-from scripts.report import (
-    generate_report,         # 生成报告内容
-    save_report,             # 保存报告到磁盘
-    get_reports_dir,         # 获取报告目录
-)
-```
-
-**保存报告示例：**
-
-```python
-from scripts.report import save_report
-
-filepath = save_report(
-    stock_name="招商银行",
-    ts_code="600036.SH",
-    industry="银行",
-    data=tushare_data,
-    search_results=search_data,
-    scores=scoring_results,
-    screening=screening_results,
-    checklist=checklist_results,
-    conclusion="综合结论",
-)
-
-print(f"报告已保存至: {filepath}")
-# 输出: 报告已保存至: ./招商银行_600036_20260328.md
-```
+| 命令 | 说明 |
+|------|------|
+| `uv run scripts/report.py generate --data <json文件> [--output <目录>]` | 生成并保存报告 |
+| `uv run scripts/report.py preview --data <json文件>` | 预览报告内容 |
 
 ## 示例执行流程
 
-**用户**：MR Dang 选股 招商银行
+**用户**：MR Dang 选股 `<股票名称>`
 
 **助手执行**：
 
-```python
-from mrdang import (
-    search_stock, get_all_data, search_company_info,
-    extract_search_content, save_report
-)
-
+```bash
 # 1. 搜索股票代码
-result = search_stock("招商银行")
-ts_code = result.iloc[0]["ts_code"]  # "600036.SH"
-stock_name = result.iloc[0]["name"]
-industry = result.iloc[0]["industry"]
+uv run scripts/data.py search <股票名称>
+# 获取 ts_code 和行业信息
 
 # 2. 获取 Tushare 数据
-data = get_all_data(ts_code)
+uv run scripts/data.py get <ts_code> --type all
 
 # 3. 搜索网络信息
-search_results = search_company_info(stock_name, industry)
+uv run scripts/search.py company <公司名称> --industry <行业>
 
 # 4. 执行评分规则（根据 SKILL 中的打分标准）
 # ... 计算 scores, screening, checklist ...
 
-# 5. 保存报告到磁盘
-filepath = save_report(
-    stock_name=stock_name,
-    ts_code=ts_code,
-    industry=industry,
-    data=data,
-    search_results=search_results,
-    scores=scores,
-    screening=screening,
-    checklist=checklist,
-    conclusion="综合结论",
-)
-
-print(f"报告已保存至: {filepath}")
+# 5. 准备 JSON 数据文件，然后保存报告
+uv run scripts/report.py generate --data analysis.json --output ./
 ```
 
 **输出**：
 1. 在终端显示完整的选股打分报告
-2. 报告自动保存至当前目录 `./招商银行_600036_20260328.md`
+2. 报告自动保存至当前目录 `./<股票名称>_<代码>_YYYYMMDD.md`

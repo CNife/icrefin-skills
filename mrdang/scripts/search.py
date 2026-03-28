@@ -1,3 +1,10 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "requests",
+# ]
+# ///
+
 """Tavily web search for MR Dang stock analysis."""
 
 import os
@@ -144,12 +151,83 @@ def extract_search_content(results: list[dict[str, Any]], max_length: int = 500)
     return "\n".join(contents) if contents else "无相关信息"
 
 
-if __name__ == "__main__":
-    # Test the search
-    print("Testing tavily_search...")
-    result = tavily_search("招商银行 主营业务", max_results=2)
-    print(f"Found {len(result.get('results', []))} results")
+def main() -> None:
+    """CLI entry point for Tavily search."""
+    import argparse
+    import json
 
-    for r in result.get("results", [])[:1]:
-        print(f"Title: {r.get('title')}")
-        print(f"Content: {r.get('content', '')[:200]}...")
+    parser = argparse.ArgumentParser(
+        description="Search the web using Tavily API",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Simple search
+  uv run scripts/search.py query "<搜索关键词>"
+
+  # Search with more results and advanced depth
+  uv run scripts/search.py query "<搜索关键词>" --max-results 10 --depth advanced
+
+  # Search with domain filtering
+  uv run scripts/search.py query "<搜索关键词>" --include-domains eastmoney.com
+
+  # Company info search (comprehensive)
+  uv run scripts/search.py company <公司名称> --industry <行业>
+
+  # Extract content from search results JSON file
+  uv run scripts/search.py extract results.json --max-length 1000
+        """,
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # Simple search command
+    simple_parser = subparsers.add_parser("query", help="Perform a simple search")
+    simple_parser.add_argument("query", help="Search query")
+    simple_parser.add_argument("--max-results", type=int, default=5, help="Max results (default: 5)")
+    simple_parser.add_argument("--depth", choices=["basic", "advanced"], default="basic", help="Search depth")
+    simple_parser.add_argument("--include-domains", action="append", help="Domains to include (can be used multiple times)")
+    simple_parser.add_argument("--exclude-domains", action="append", help="Domains to exclude (can be used multiple times)")
+
+    # Company info command
+    company_parser = subparsers.add_parser("company", help="Search comprehensive company info")
+    company_parser.add_argument("name", help="Company name")
+    company_parser.add_argument("--industry", default="", help="Industry type (e.g., 银行)")
+
+    # Extract content command
+    extract_parser = subparsers.add_parser("extract", help="Extract content from search results JSON file")
+    extract_parser.add_argument("json_file", help="Path to JSON file containing search results")
+    extract_parser.add_argument("--max-length", type=int, default=500, help="Max length of extracted content (default: 500)")
+
+    args = parser.parse_args()
+
+    if args.command == "query":
+        result = tavily_search(
+            args.query,
+            max_results=args.max_results,
+            search_depth=args.depth,
+            include_domains=args.include_domains,
+            exclude_domains=args.exclude_domains,
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+
+    elif args.command == "company":
+        results = search_company_info(args.name, args.industry)
+        output = {}
+        for category, items in results.items():
+            output[category] = [
+                {"title": r.get("title"), "url": r.get("url"), "content": r.get("content", "")[:200]}
+                for r in items
+            ]
+        print(json.dumps(output, indent=2, ensure_ascii=False))
+
+    elif args.command == "extract":
+        with open(args.json_file, encoding="utf-8") as f:
+            data = json.load(f)
+        # Support both direct results list and nested results
+        results = data if isinstance(data, list) else data.get("results", [])
+        content = extract_search_content(results, args.max_length)
+        print(content)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,3 +1,8 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
+
 """Report generation and saving for MR Dang stock analysis."""
 
 import os
@@ -304,59 +309,83 @@ def save_report(
     return filepath
 
 
-if __name__ == "__main__":
-    # Test report generation
-    print("Testing report generation...")
+def main() -> None:
+    """CLI entry point for report generation."""
+    import argparse
+    import json
 
-    test_data = {
-        "basic": {"name": "招商银行", "area": "深圳", "industry": "银行"},
-        "daily_basic": {"pe_ttm": 6.62, "pb": 0.93, "total_mv": 99467071.0, "circ_mv": 81360556.0, "dv_ratio": 5.07},
-        "financial": {"debt_to_assets": 90.2, "roe": 12.02, "ocfps": 17.9},
-        "dividend": {"dividend_count": 2, "dividend_stability": "基本稳定"},
-        "price_position": {"latest_close": 39.44, "high_52w": 48.55, "low_52w": 37.31, "price_position_pct": 19.0, "position_level": "接近历史低位"},
-    }
+    parser = argparse.ArgumentParser(
+        description="Generate MR Dang stock analysis report",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Generate report from JSON data file
+  uv run scripts/report.py generate --data <json文件> --output <目录>
 
-    test_scores = {
-        "生产资料属性": {"score": 19, "max": 20, "reason": "银行属于重资产行业"},
-        "股息率": {"score": 20, "max": 20, "reason": "5.07% ≥ 5%"},
-        "估值": {"score": 15, "max": 15, "reason": "PE 6.62 ≤ 10"},
-        "行业竞争位置": {"score": 9, "max": 10, "reason": "股份制银行龙头"},
-        "地域因素": {"score": 9, "max": 10, "reason": "深圳，经济发达"},
-        "流动性与财务安全": {"score": 5, "max": 5, "reason": "万亿市值，财务健康"},
-        "逻辑清晰度": {"score": 5, "max": 5, "reason": "逻辑清晰"},
-    }
+  # Preview report content (print to stdout)
+  uv run scripts/report.py preview --data <json文件>
 
-    test_screening = {
-        "题材股筛查": "通过",
-        "高估值筛查": "通过",
-        "产能过剩筛查": "通过",
-        "增发圈钱筛查": "通过",
-        "逻辑复杂度筛查": "通过",
-    }
-
-    test_checklist = {
-        "三句话逻辑": "达标",
-        "生产资料属性": "达标",
-        "股息率≥3%": "达标",
-        "PE≤20": "达标",
-        "股价不在高位": "达标",
-        "不依赖短期财报": "达标",
-        "独立判断": "达标",
-        "跌30%敢加仓": "存疑",
-        "无更优替代": "存疑",
-        "明确持有周期": "存疑",
-    }
-
-    filepath = save_report(
-        stock_name="招商银行",
-        ts_code="600036.SH",
-        industry="银行",
-        data=test_data,
-        search_results={"business_summary": "零售银行龙头", "position_summary": "股份制银行第一"},
-        scores=test_scores,
-        screening=test_screening,
-        checklist=test_checklist,
-        conclusion="适合长期持有",
+The JSON data file should contain:
+  {
+    "stock_name": "<股票名称>",
+    "ts_code": "<ts_code>",
+    "industry": "<行业>",
+    "data": {...},
+    "search_results": {...},
+    "scores": {...},
+    "screening": {...},
+    "checklist": {...},
+    "conclusion": "..."
+  }
+        """,
     )
 
-    print(f"Report saved to: {filepath}")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # Generate command
+    gen_parser = subparsers.add_parser("generate", help="Generate and save report")
+    gen_parser.add_argument("--data", required=True, help="Path to JSON data file")
+    gen_parser.add_argument("--output", default=".", help="Output directory (default: current)")
+
+    # Preview command
+    preview_parser = subparsers.add_parser("preview", help="Preview report content")
+    preview_parser.add_argument("--data", required=True, help="Path to JSON data file")
+
+    args = parser.parse_args()
+
+    # Load data from JSON file
+    with open(args.data, encoding="utf-8") as f:
+        params = json.load(f)
+
+    if args.command == "generate":
+        filepath = save_report(
+            stock_name=params["stock_name"],
+            ts_code=params["ts_code"],
+            industry=params["industry"],
+            data=params["data"],
+            search_results=params["search_results"],
+            scores=params["scores"],
+            screening=params["screening"],
+            checklist=params["checklist"],
+            conclusion=params["conclusion"],
+            output_dir=args.output,
+        )
+        print(f"Report saved to: {filepath}")
+
+    elif args.command == "preview":
+        content = generate_report(
+            stock_name=params["stock_name"],
+            ts_code=params["ts_code"],
+            industry=params["industry"],
+            data=params["data"],
+            search_results=params["search_results"],
+            scores=params["scores"],
+            screening=params["screening"],
+            checklist=params["checklist"],
+            conclusion=params["conclusion"],
+        )
+        print(content)
+
+
+if __name__ == "__main__":
+    main()
