@@ -7,7 +7,7 @@
 - 🔄 **自动化数据获取**: 通过 Tushare API 自动获取财务、估值、分红数据
 - 🔍 **智能信息搜索**: 使用 Jina AI 搜索公司业务、行业地位、风险信息
 - 📊 **标准化评分体系**: 8维度打分，总分100分，自动评级
-- 📝 **报告自动保存**: 生成的分析报告自动保存到当前目录
+- 📝 **标准化报告格式**: 输出结构完整的 Markdown 分析报告
 
 ## 核心规则
 
@@ -37,7 +37,21 @@ pip install tushare requests pandas
 uv pip install tushare requests pandas
 ```
 
-### 3. 配置环境变量
+### 3. 配置 API Key（二选一）
+
+**方式 A：.env 文件（推荐）**
+
+在你的**工作目录**（不是 skill 目录）创建 `.env` 文件：
+
+```bash
+# 工作目录/.env
+TUSHARE_TOKEN="your_tushare_token"
+JINA_API_KEY="your_jina_api_key"
+```
+
+`.env` 已在 `.gitignore` 中排除，不会被提交到版本控制。
+
+**方式 B：环境变量**
 
 ```bash
 # Tushare API Token (必需)
@@ -46,6 +60,8 @@ export TUSHARE_TOKEN="your_tushare_token"
 # Jina API Key (可选，提高搜索限额)
 export JINA_API_KEY="your_jina_api_key"
 ```
+
+> **安全提醒**：不要将 API Key 粘贴到 AI 对话上下文中。
 
 获取 API 密钥:
 - Tushare: https://tushare.pro/register
@@ -68,7 +84,6 @@ MR Dang 打分 中国神华
 ```python
 from scripts.data import search_stock, get_all_data
 from scripts.search import search_company_info
-from scripts.report import save_report
 
 # 搜索股票
 result = search_stock("招商银行")
@@ -79,19 +94,6 @@ data = get_all_data(ts_code)
 
 # 搜索公司信息
 search_results = search_company_info("招商银行", "银行")
-
-# 保存报告
-filepath = save_report(
-    stock_name="招商银行",
-    ts_code=ts_code,
-    industry="银行",
-    data=data,
-    search_results=search_results,
-    scores={...},
-    screening={...},
-    checklist={...},
-    conclusion="综合结论",
-)
 ```
 
 ## 评分体系
@@ -127,9 +129,9 @@ mrdang/
 ├── README.md         # 本文档
 └── scripts/          # Python 脚本
     ├── __init__.py   # 包导出
+    ├── _keys.py      # API Key 安全加载
     ├── data.py       # Tushare 数据获取
-    ├── search.py     # Jina 网络搜索
-    └── report.py     # 报告生成与保存
+    └── search.py     # Jina 网络搜索
 ```
 
 ## API 函数
@@ -154,17 +156,16 @@ mrdang/
 | `search_company_info(name, industry)` | 搜索公司全面信息 |
 | `extract_search_content(results)` | 提取搜索摘要 |
 
-### report.py - 报告生成
+### _keys.py - 安全密钥加载
 
 | 函数 | 说明 |
 |------|------|
-| `generate_report(...)` | 生成报告内容 |
-| `save_report(...)` | 保存报告到磁盘 |
-| `get_reports_dir()` | 获取报告目录 |
+| `get_tushare_token()` | 获取 Tushare Token（环境变量 → .env） |
+| `get_jina_api_key()` | 获取 Jina API Key（可选） |
 
 ## 输出示例
 
-报告自动保存至当前目录 `./招商银行_600036_20260328.md`
+AI 生成报告后，可手动保存至当前目录，例如 `./招商银行_600036_20260328.md`
 
 ```markdown
 # MR Dang 选股打分报告
@@ -196,12 +197,17 @@ mrdang/
 
 ## 更新日志
 
+### v1.1.0 (2026-03-31)
+- 新增安全密钥加载机制（`_keys.py`）
+- 支持从当前目录 `.env` 文件读取 API Key
+- 修复 `__init__.py` 对已删除 `report.py` 的引用
+- 报告生成改为 AI 直接输出，不再依赖脚本保存
+
 ### v1.0.0 (2026-03-28)
 - 初始版本
 - 支持 Tushare 数据获取
 - 支持 Jina 网络搜索
 - 支持 8 维度评分
-- 支持报告自动保存
 
 ## 许可证
 

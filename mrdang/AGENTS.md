@@ -11,9 +11,10 @@ mrdang/
 ├── SKILL.md         # 技能定义（触发词、执行流程、评分规则、输出模板）
 ├── README.md        # 安装指南 + API 函数文档
 └── scripts/
-    ├── __init__.py  # 包导出（data/search/report 的公共 API）
-    ├── data.py      # Tushare 数据获取（402 行，含 CLI）
-    └── search.py    # Jina 网络搜索（308 行，含 CLI）
+    ├── __init__.py  # 包导出（data/search 的公共 API）
+    ├── _keys.py     # API Key 安全加载（环境变量 → .env）
+    ├── data.py      # Tushare 数据获取（466 行，含 CLI）
+    └── search.py    # Jina 网络搜索（304 行，含 CLI）
 ```
 
 ## WHERE TO LOOK
@@ -34,7 +35,7 @@ mrdang/
 
 ## ANTI-PATTERNS
 
-- 禁止硬编码 API Token，必须从 `os.environ` 读取
+- 禁止硬编码 API Token，必须通过 `scripts/_keys.py` 加载
 - 禁止在 `__init__.py` 中导入不存在的模块（`report.py` 已移除）
 - 禁止美化评分结果，严格按 SKILL.md 规则执行
 - 数据缺失标注【数据不足】，不隐瞒

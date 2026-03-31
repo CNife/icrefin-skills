@@ -1,6 +1,6 @@
 ---
 name: mrdang
-description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A 股进行风险筛查和多维度打分。触发词：MR Dang 选股、MR Dang 打分、MR Dang 分析
+description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A 股进行风险筛查和多维度打分。当用户提及 A 股选股、价值投资分析、股票打分、投资评级、股息率筛选、银行股分析、资源股评估时立即使用此技能。触发词：MR Dang 选股、MR Dang 打分、MR Dang 分析
 ---
 
 # MR Dang 价值选股打分助手
@@ -22,6 +22,13 @@ description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A
 - MR Dang 打分 `<股票名称>` `<行业类型>`
 - 帮我用 MR Dang 体系分析 `<股票代码>`
 
+**自动触发场景**（无需用户显式提及 MR Dang）：
+- 用户询问某只 A 股是否值得投资 / 能不能买
+- 用户提及股息率、分红稳定性筛选
+- 用户询问银行股 / 资源股 / 周期股 / 公用事业股的投资价值
+- 用户需要股票估值判断（PE/PB 分析）
+- 用户提及"价值投资"、"安全边际"、"高股息"等概念
+
 ## 可用脚本
 
 | 脚本 | 用途 |
@@ -31,9 +38,23 @@ description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A
 
 所有脚本均遵循 **PEP 723** 标准，内置依赖声明，可直接用 `uv run` 执行，无需手动安装依赖。
 
-**环境变量要求：**
-- `TUSHARE_TOKEN` - Tushare API Token
-- `JINA_API_KEY` - Jina API Key（可选，提高搜索限额）
+**API Key 安全配置：**
+
+脚本通过 `scripts/_keys.py` 统一加载 API Key，加载优先级：环境变量 > 当前目录 `.env` 文件。
+
+推荐做法：在**当前工作目录**（非 skill 目录）创建 `.env` 文件：
+```
+TUSHARE_TOKEN=your_token_here
+JINA_API_KEY=your_key_here
+```
+
+`.env` 已在仓库 `.gitignore` 中排除，不会被提交。
+
+支持的环境变量：
+- `TUSHARE_TOKEN` 或 `TUSHARE_API_KEY` — Tushare API Token（必需，二选一）
+- `JINA_API_KEY` — Jina API Key（可选，提高搜索限额）
+
+**禁止将 API Key 直接粘贴到对话上下文中。**
 
 ## 执行流程
 
@@ -92,7 +113,7 @@ uv run scripts/data.py get <ts_code> --type price
 uv run scripts/search.py company <公司名称> --industry <行业>
 
 # 单独搜索
-uv run scripts/search.py query "<公司名称> 主营业务" --max-results 5 --depth advanced
+uv run scripts/search.py query "<公司名称> 主营业务" --max-results 5
 uv run scripts/search.py query "<公司名称> 行业地位" --include-domains eastmoney.com
 
 # 从搜索结果提取摘要
@@ -323,7 +344,7 @@ uv run scripts/search.py extract results.json --max-length 500
 
 | 命令 | 说明 |
 |------|------|
-| `uv run scripts/search.py query <查询> [--max-results N] [--depth basic\|advanced]` | Jina 搜索 |
+| `uv run scripts/search.py query <查询> [--max-results N]` | Jina 搜索 |
 | `uv run scripts/search.py company <公司名> [--industry 行业]` | 搜索公司全面信息 |
 | `uv run scripts/search.py extract <json文件> [--max-length N]` | 提取搜索摘要 |
 
