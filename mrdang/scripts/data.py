@@ -8,19 +8,16 @@
 
 """Tushare data fetching functions for MR Dang stock analysis."""
 
-import os
 from datetime import datetime, timedelta
 from typing import Any
 
 import pandas as pd
 import tushare as ts
 
-# Initialize Tushare with token from environment
-_TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN") or os.environ.get("TUSHARE_API_KEY")
-if not _TUSHARE_TOKEN:
-    raise ValueError("TUSHARE_TOKEN or TUSHARE_API_KEY environment variable not set")
+from _keys import get_tushare_token
 
-pro = ts.pro_api(_TUSHARE_TOKEN)
+# Initialize Tushare with secure token loading
+pro = ts.pro_api(get_tushare_token())
 
 
 def search_stock(keyword: str) -> pd.DataFrame:
