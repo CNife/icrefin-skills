@@ -16,9 +16,9 @@ import pandas as pd
 import tushare as ts
 
 # Initialize Tushare with token from environment
-_TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN")
+_TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN") or os.environ.get("TUSHARE_API_KEY")
 if not _TUSHARE_TOKEN:
-    raise ValueError("TUSHARE_TOKEN environment variable not set")
+    raise ValueError("TUSHARE_TOKEN or TUSHARE_API_KEY environment variable not set")
 
 pro = ts.pro_api(_TUSHARE_TOKEN)
 
@@ -32,11 +32,15 @@ def search_stock(keyword: str) -> pd.DataFrame:
     Returns:
         DataFrame with columns: ts_code, name, area, industry, market, list_date
     """
-    df = pro.stock_basic(exchange="", list_status="L", fields="ts_code,symbol,name,area,industry,market,list_date")
-    # Filter by keyword
-    mask = df["name"].str.contains(keyword, case=False, na=False) | df["ts_code"].str.contains(
-        keyword, case=False, na=False
+    df = pro.stock_basic(
+        exchange="",
+        list_status="L",
+        fields="ts_code,symbol,name,area,industry,market,list_date",
     )
+    # Filter by keyword
+    mask = df["name"].str.contains(keyword, case=False, na=False) | df[
+        "ts_code"
+    ].str.contains(keyword, case=False, na=False)
     result = df[mask]
     return result.reset_index(drop=True)
 
@@ -50,7 +54,9 @@ def get_stock_basic(ts_code: str) -> dict[str, Any]:
     Returns:
         Dictionary with basic stock info
     """
-    df = pro.stock_basic(ts_code=ts_code, fields="ts_code,symbol,name,area,industry,market,list_date")
+    df = pro.stock_basic(
+        ts_code=ts_code, fields="ts_code,symbol,name,area,industry,market,list_date"
+    )
     if df.empty:
         return {"error": f"No data found for {ts_code}"}
     return df.iloc[0].to_dict()
@@ -113,12 +119,32 @@ def get_financial_indicator(ts_code: str, periods: int = 4) -> pd.DataFrame:
     Returns:
         DataFrame with financial indicators
     """
-    df = pro.fina_indicator(ts_code=ts_code, fields=[
-        "ts_code", "ann_date", "end_date", "roe", "roa", "debt_to_assets",
-        "ocfps", "basic_eps", "dt_eps", "cfps", "ebit_of_gr", "op_yoy",
-        "ebt_of_gr", "roa_yearly", "roe_dt", "roe_yearly", "cfps_yoy",
-        "current_ratio", "quick_ratio", "grossprofit_margin", "profit_dedt",
-    ])
+    df = pro.fina_indicator(
+        ts_code=ts_code,
+        fields=[
+            "ts_code",
+            "ann_date",
+            "end_date",
+            "roe",
+            "roa",
+            "debt_to_assets",
+            "ocfps",
+            "basic_eps",
+            "dt_eps",
+            "cfps",
+            "ebit_of_gr",
+            "op_yoy",
+            "ebt_of_gr",
+            "roa_yearly",
+            "roe_dt",
+            "roe_yearly",
+            "cfps_yoy",
+            "current_ratio",
+            "quick_ratio",
+            "grossprofit_margin",
+            "profit_dedt",
+        ],
+    )
     if df.empty:
         return pd.DataFrame()
 
@@ -166,7 +192,10 @@ def get_dividend_info(ts_code: str, years: int = 3) -> dict[str, Any]:
         Dictionary with dividend metrics
     """
     # Get dividend records
-    df = pro.dividend(ts_code=ts_code, fields="ts_code,end_date,div_proc,stk_div,cash_div,record_date,ex_date,ann_date")
+    df = pro.dividend(
+        ts_code=ts_code,
+        fields="ts_code,end_date,div_proc,stk_div,cash_div,record_date,ex_date,ann_date",
+    )
 
     if df.empty:
         return {
@@ -231,7 +260,9 @@ def get_daily_ohlcv(ts_code: str, days: int = 250) -> pd.DataFrame:
         DataFrame with columns: trade_date, open, high, low, close, vol, amount
     """
     end_date = datetime.now().strftime("%Y%m%d")
-    start_date = (datetime.now() - timedelta(days=days * 1.5)).strftime("%Y%m%d")  # Buffer for non-trading days
+    start_date = (datetime.now() - timedelta(days=days * 1.5)).strftime(
+        "%Y%m%d"
+    )  # Buffer for non-trading days
 
     df = pro.daily(ts_code=ts_code, start_date=start_date, end_date=end_date)
 
@@ -269,7 +300,11 @@ def get_price_position(ts_code: str, days: int = 250) -> dict[str, Any]:
     avg_close = df["close"].mean()
 
     # Position relative to 52-week range (0-100%)
-    price_position = (latest_close - low_52w) / (high_52w - low_52w) * 100 if high_52w != low_52w else 50
+    price_position = (
+        (latest_close - low_52w) / (high_52w - low_52w) * 100
+        if high_52w != low_52w
+        else 50
+    )
 
     # Distance from high
     distance_from_high = (high_52w - latest_close) / high_52w * 100
@@ -344,7 +379,9 @@ Examples:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # Search command
-    search_parser = subparsers.add_parser("search", help="Search for stock by name or code")
+    search_parser = subparsers.add_parser(
+        "search", help="Search for stock by name or code"
+    )
     search_parser.add_argument("keyword", help="Stock name or code to search")
 
     # Get command
@@ -352,14 +389,40 @@ Examples:
     get_parser.add_argument("ts_code", help="Tushare stock code (e.g., 600036.SH)")
     get_parser.add_argument(
         "--type",
-        choices=["basic", "daily", "financial", "financial-full", "dividend", "ohlcv", "price", "all"],
+        choices=[
+            "basic",
+            "daily",
+            "financial",
+            "financial-full",
+            "dividend",
+            "ohlcv",
+            "price",
+            "all",
+        ],
         default="all",
         help="Type of data to fetch (default: all)",
     )
-    get_parser.add_argument("--date", help="Trade date for daily data (YYYYMMDD format)")
-    get_parser.add_argument("--periods", type=int, default=4, help="Number of periods for financial data (default: 4)")
-    get_parser.add_argument("--years", type=int, default=3, help="Number of years for dividend data (default: 3)")
-    get_parser.add_argument("--days", type=int, default=250, help="Number of trading days for OHLCV/price data (default: 250)")
+    get_parser.add_argument(
+        "--date", help="Trade date for daily data (YYYYMMDD format)"
+    )
+    get_parser.add_argument(
+        "--periods",
+        type=int,
+        default=4,
+        help="Number of periods for financial data (default: 4)",
+    )
+    get_parser.add_argument(
+        "--years",
+        type=int,
+        default=3,
+        help="Number of years for dividend data (default: 3)",
+    )
+    get_parser.add_argument(
+        "--days",
+        type=int,
+        default=250,
+        help="Number of trading days for OHLCV/price data (default: 250)",
+    )
 
     args = parser.parse_args()
 
@@ -368,7 +431,11 @@ Examples:
         if result.empty:
             print(f"No stock found for: {args.keyword}")
         else:
-            print(result[["ts_code", "name", "industry", "market", "list_date"]].to_string())
+            print(
+                result[
+                    ["ts_code", "name", "industry", "market", "list_date"]
+                ].to_string()
+            )
 
     elif args.command == "get":
         if args.type == "basic":

@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-A 股价值选股打分助手 — 通过 Tushare 获取财务数据 + Tavily 搜索补充信息，按 8 维度评分体系输出投资评级。
+A 股价值选股打分助手 — 通过 Tushare 获取财务数据 + Jina 搜索补充信息，按 8 维度评分体系输出投资评级。
 
 ## STRUCTURE
 
@@ -13,7 +13,7 @@ mrdang/
 └── scripts/
     ├── __init__.py  # 包导出（data/search/report 的公共 API）
     ├── data.py      # Tushare 数据获取（402 行，含 CLI）
-    └── search.py    # Tavily 网络搜索（233 行，含 CLI）
+    └── search.py    # Jina 网络搜索（308 行，含 CLI）
 ```
 
 ## WHERE TO LOOK
@@ -22,7 +22,7 @@ mrdang/
 |------|----------|-------|
 | 修改评分规则 | `SKILL.md` | 8 维度打分 + 评级标准 + 买入前清单 |
 | 修改数据获取 | `scripts/data.py` | Tushare pro_api 封装 |
-| 修改搜索逻辑 | `scripts/search.py` | Tavily API 封装 |
+| 修改搜索逻辑 | `scripts/search.py` | Jina API 封装 |
 | 添加新数据源 | `scripts/` 下新建文件 | 遵循 PEP 723 内联依赖 |
 
 ## CONVENTIONS

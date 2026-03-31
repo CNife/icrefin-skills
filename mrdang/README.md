@@ -5,7 +5,7 @@
 ## 功能特点
 
 - 🔄 **自动化数据获取**: 通过 Tushare API 自动获取财务、估值、分红数据
-- 🔍 **智能信息搜索**: 使用 Tavily API 搜索公司业务、行业地位、风险信息
+- 🔍 **智能信息搜索**: 使用 Jina AI 搜索公司业务、行业地位、风险信息
 - 📊 **标准化评分体系**: 8维度打分，总分100分，自动评级
 - 📝 **报告自动保存**: 生成的分析报告自动保存到当前目录
 
@@ -43,13 +43,13 @@ uv pip install tushare requests pandas
 # Tushare API Token (必需)
 export TUSHARE_TOKEN="your_tushare_token"
 
-# Tavily API Key (必需)
-export TAVILY_API_KEY="your_tavily_api_key"
+# Jina API Key (可选，提高搜索限额)
+export JINA_API_KEY="your_jina_api_key"
 ```
 
 获取 API 密钥:
 - Tushare: https://tushare.pro/register
-- Tavily: https://tavily.com/
+- Jina: https://jina.ai/
 
 ## 使用方法
 
@@ -128,7 +128,7 @@ mrdang/
 └── scripts/          # Python 脚本
     ├── __init__.py   # 包导出
     ├── data.py       # Tushare 数据获取
-    ├── search.py     # Tavily 网络搜索
+    ├── search.py     # Jina 网络搜索
     └── report.py     # 报告生成与保存
 ```
 
@@ -150,7 +150,7 @@ mrdang/
 
 | 函数 | 说明 |
 |------|------|
-| `tavily_search(query)` | Tavily API 搜索 |
+| `jina_search(query)` | Jina API 搜索 |
 | `search_company_info(name, industry)` | 搜索公司全面信息 |
 | `extract_search_content(results)` | 提取搜索摘要 |
 
@@ -199,7 +199,7 @@ mrdang/
 ### v1.0.0 (2026-03-28)
 - 初始版本
 - 支持 Tushare 数据获取
-- 支持 Tavily 网络搜索
+- 支持 Jina 网络搜索
 - 支持 8 维度评分
 - 支持报告自动保存
 

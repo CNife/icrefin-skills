@@ -18,8 +18,8 @@ from scripts.report import (
 )
 from scripts.search import (
     extract_search_content,
+    jina_search,
     search_company_info,
-    tavily_search,
 )
 
 __all__ = [
@@ -34,7 +34,7 @@ __all__ = [
     "get_price_position",
     "get_all_data",
     # Search functions
-    "tavily_search",
+    "jina_search",
     "search_company_info",
     "extract_search_content",
     # Report functions

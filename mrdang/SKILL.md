@@ -6,7 +6,7 @@ description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A
 # MR Dang 价值选股打分助手
 
 根据 MR Dang 投资体系，对 A 股上市公司进行**标准化风险筛查 + 多维度打分 + 投资评级**。
-自动通过 **Tushare 获取财务/估值/分红数据** + **Tavily 搜索补充业务/行业/风险信息**。
+自动通过 **Tushare 获取财务/估值/分红数据** + **Jina 搜索补充业务/行业/风险信息**。
 
 ## 核心规则
 
@@ -27,13 +27,13 @@ description: MR Dang 价值选股打分助手 - 根据 MR Dang 投资体系对 A
 | 脚本 | 用途 |
 |------|------|
 | `scripts/data.py` | 从 Tushare 获取股票数据 |
-| `scripts/search.py` | 通过 Tavily 搜索网络信息 |
+| `scripts/search.py` | 通过 Jina 搜索网络信息 |
 
 所有脚本均遵循 **PEP 723** 标准，内置依赖声明，可直接用 `uv run` 执行，无需手动安装依赖。
 
 **环境变量要求：**
 - `TUSHARE_TOKEN` - Tushare API Token
-- `TAVILY_API_KEY` - Tavily API Key（搜索功能需要）
+- `JINA_API_KEY` - Jina API Key（可选，提高搜索限额）
 
 ## 执行流程
 
@@ -83,7 +83,7 @@ uv run scripts/data.py get <ts_code> --type price
 - 近1年股息率、近3年分红稳定性、派息率
 - 近期增发/解禁情况
 
-### 第三步：Tavily 搜索非结构化信息
+### 第三步：Jina 搜索非结构化信息
 
 使用 `scripts/search.py` 搜索以下内容：
 
@@ -323,7 +323,7 @@ uv run scripts/search.py extract results.json --max-length 500
 
 | 命令 | 说明 |
 |------|------|
-| `uv run scripts/search.py query <查询> [--max-results N] [--depth basic\|advanced]` | Tavily 搜索 |
+| `uv run scripts/search.py query <查询> [--max-results N] [--depth basic\|advanced]` | Jina 搜索 |
 | `uv run scripts/search.py company <公司名> [--industry 行业]` | 搜索公司全面信息 |
 | `uv run scripts/search.py extract <json文件> [--max-length N]` | 提取搜索摘要 |
 
